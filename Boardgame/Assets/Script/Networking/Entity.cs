@@ -12,7 +12,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 public class Entity : MonoBehaviour
 {
     private int tid;
-    private int eid;
+    public int eid { get; private set; }
 
     private int owner;
 
@@ -20,7 +20,7 @@ public class Entity : MonoBehaviour
     {
         get
         {
-            return owner == PhotonNetwork.LocalPlayer.ActorNumber;
+            return owner == PhotonNetwork.LocalPlayer.ActorNumber || !GameManager.Instance.gameStarted;
         }
     }
 
@@ -47,7 +47,12 @@ public class Entity : MonoBehaviour
 
     public virtual void OnStart()
     {
-        
+
+    }
+
+    public virtual void OnUpdate()
+    {
+
     }
 
     /// <summary>
@@ -57,9 +62,9 @@ public class Entity : MonoBehaviour
     {
         if(Owned)
         {
-            h.Add('t', tid);
-            h.Add('e', eid);
-            h.Add('o', owner);
+            h[(byte)'t'] = tid;
+            h[(byte)'e'] = eid;
+            h[(byte)'o'] = owner;
         }
     }
 
@@ -68,19 +73,21 @@ public class Entity : MonoBehaviour
     /// </summary>
     public virtual void Deserialize(Hashtable h)
     {
-        if(h.TryGetValue('t',out object tid))
+        if(h.TryGetValue((byte)'t',out object tid))
         {
             this.tid = (int)tid;
         }
 
-        if (h.TryGetValue('e', out object eid))
+        if (h.TryGetValue((byte)'e', out object eid))
         {
             this.eid = (int)eid;
         }
 
-        if (h.TryGetValue('o', out object oid))
+        if (h.TryGetValue((byte)'o', out object oid))
         {
             owner = (int)oid;
         }
+
+        Debug.LogFormat("Recceived: Entity[eid:{0}] Owner[{1}]", this.eid, owner);
     }
 }

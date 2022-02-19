@@ -35,16 +35,15 @@ public class EntityManager
 
     public void Serialize(Hashtable h)
     {
-        foreach(var kv in entities)
+        var character = GameManager.Instance.Player.character;
+        if (h.TryGetValue(character.eid, out object table))
         {
-            if(h.TryGetValue(kv.Key,out object table))
-            {
-                kv.Value.Deserialize((Hashtable)table);
-            } else
-            {
-                h.Add(kv.Key,new Hashtable());
-                kv.Value.Deserialize((Hashtable)h[kv.Key]);
-            }
+            character.Serialize((Hashtable)table);
+        }
+        else
+        {
+            h.Add(character.eid, new Hashtable());
+            character.Serialize((Hashtable)h[character.eid]);
         }
     }
 
@@ -54,19 +53,57 @@ public class EntityManager
         {
             if(entities.TryGetValue((int)key,out Entity entity)) //old enetity
             {
-                entity.Deserialize((Hashtable)h[key]);
+                if(!entity.Owned)
+                    entity.Deserialize((Hashtable)h[key]);
             } else //new entity
             {
                 var table = (Hashtable)h[key];
-                if(table.TryGetValue('t', out object tid) && table.TryGetValue('c',out object cid))
+                if(table.TryGetValue((byte)'t', out object tid) && table.TryGetValue((byte)'c',out object cid))
                 {
                     var method = NetworkConstant.Methods[(int)tid];
                     var ent = method.Invoke(null, new object[] { (int)cid }) as Entity;
                     ent.Deserialize(table);
                     ent.OnAwake();
                     ent.OnStart();
+                    entities.Add((int)key,ent);
                 }
             }
+        }
+    }
+
+    public void HitCharacters(Vector3 center, float damage, int attacker)
+    {
+        int[] data = new int[3];
+        foreach(var kv in entities)
+        {
+            if ((kv.Value.transform.position - center).magnitude < 2f)
+            {
+                data[0] = kv.Key;
+                data[1] = (int)(damage * 10);
+                data[2] = attacker;
+                NetworkManager.Instance.SendNetEvent(data, NetworkConstant.senddmg, true);
+            }
+        }
+    }
+
+    public void DoHitCharacters(int[] dmginfo)
+    {
+        if(dmginfo.Length != 3)
+        {
+            Debug.LogError("Unknown DamageInfor Received!");
+            return;
+        }
+
+        if(entities.TryGetValue(dmginfo[2], out Entity et))
+        {
+            var attacker = et as Character;
+            attacker.Animate(Character.AnimState.ATTACK);
+        }
+
+        if(entities.TryGetValue(dmginfo[0],out Entity entity))
+        {
+            var character = entity as Character;
+            character.DealDamage(dmginfo[1]);
         }
     }
 
@@ -77,6 +114,12 @@ public class EntityManager
         {
             timer = 0f;
             Serialize(data);
+            NetworkManager.Instance.SendNetEvent(data,NetworkConstant.senddata);
+        }
+
+        foreach(var entity in entities.Values)
+        {
+            entity.OnUpdate();
         }
     }
 }

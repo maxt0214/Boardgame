@@ -18,8 +18,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks, IOnEventCallback
         {
             if (!instance)
                 instance = FindObjectOfType<NetworkManager>();
-            if (!instance)
-                throw new Exception("No instance of GameManager in the scene!");
             return instance;
         }
     }
@@ -27,11 +25,15 @@ public class NetworkManager : MonoBehaviourPunCallbacks, IOnEventCallback
     RoomOptions roomOptions;
 
     public UnityAction onJoinedRoom;
+    public bool connecting { get; private set; } = false;
 
     void Start()
     {
+        DontDestroyOnLoad(gameObject);
         roomOptions = new RoomOptions();
         roomOptions.MaxPlayers = 0;
+        roomOptions.IsOpen = true;
+        roomOptions.IsVisible = true;
     }
 
     public void ConnecteToServer()
@@ -39,6 +41,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks, IOnEventCallback
         Debug.Log("Connecting to server");
         PhotonNetwork.GameVersion = "0.0.1";
         PhotonNetwork.ConnectUsingSettings();
+        connecting = true;
     }
 
     public override void OnConnectedToMaster()
@@ -58,33 +61,40 @@ public class NetworkManager : MonoBehaviourPunCallbacks, IOnEventCallback
         base.OnJoinedRoom();
         Debug.LogFormat("Joined Room");
         onJoinedRoom?.Invoke();
+        connecting = false;
     }
 
     public override void OnJoinRoomFailed(short returnCode, string message)
     {
         base.OnJoinRoomFailed(returnCode, message);
         Debug.LogFormat("Joined Room Failed with returncode[{0}] and errmsg:{1}",returnCode,message);
+        connecting = false;
     }
 
     public override void OnDisconnected(DisconnectCause cause)
     {
         Debug.Log("NetworkManager: Disconnected from the server in cause of " + cause.ToString());
-
+        connecting = false;
     }
 
-    public void SendNetEvent(Hashtable data, byte code,  bool reliable = false)
+    public void SendNetEvent(Hashtable data, byte code, bool reliable = false)
     {
-        RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All }; // You would have to set the Receivers to All in order to receive this event on the local client as well
-        PhotonNetwork.RaiseEvent(code, data, raiseEventOptions, reliable ? SendOptions.SendReliable : SendOptions.SendUnreliable);
+        RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.Others };
+        if(PhotonNetwork.InRoom)
+            PhotonNetwork.RaiseEvent(code, data, raiseEventOptions, reliable ? SendOptions.SendReliable : SendOptions.SendUnreliable);
+    }
+
+    public void SendNetEvent(int[] param, byte code, bool reliable = false)
+    {
+        RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+        PhotonNetwork.RaiseEvent(code, param, raiseEventOptions, reliable ? SendOptions.SendReliable : SendOptions.SendUnreliable);
     }
 
     public void OnEvent(EventData photonEvent)
     {
-        if(photonEvent.Code > 199 || photonEvent.Code < 1)
-        {
-            Debug.LogErrorFormat("EventCode:{0} is prohibited!", photonEvent.Code);
-            return;
-        }
-        EntityManager.Instance.Deserialize((Hashtable)photonEvent.CustomData);
+        if(photonEvent.Code == NetworkConstant.senddata)
+            EntityManager.Instance.Deserialize((Hashtable)photonEvent.CustomData);
+        if (photonEvent.Code == NetworkConstant.senddmg)
+            EntityManager.Instance.DoHitCharacters((int[])photonEvent.CustomData);
     }
 }
