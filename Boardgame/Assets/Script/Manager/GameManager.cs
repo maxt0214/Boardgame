@@ -5,8 +5,8 @@ using System;
 
 public class GameManager : MonoBehaviour
 {
-    private GameManager instance;
-    public GameManager Instance
+    private static GameManager instance;
+    public static GameManager Instance
     {
         get
         {
@@ -18,11 +18,26 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private Dictionary<int, Entity> entities;
+    public CharacterSelector charaSelector;
+
+    private void Awake()
+    {
+        DontDestroyOnLoad(gameObject);
+    }
 
     void Start()
     {
-        DontDestroyOnLoad(gameObject);
+        NetworkManager.Instance.onJoinedRoom += StartGame;
+    }
+
+    private void OnDestroy()
+    {
+        NetworkManager.Instance.onJoinedRoom -= StartGame;
+    }
+
+    private void StartGame()
+    {
+
     }
 
     void Update()
