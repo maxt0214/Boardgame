@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
+using UnityEngine.Events;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
     RoomOptions roomOptions;
+
+    public UnityEvent onJoinedRoom;
 
     void Start()
     {
@@ -32,6 +35,19 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         base.OnJoinedLobby();
         PhotonNetwork.JoinOrCreateRoom("BoardGame", roomOptions, new TypedLobby("Main Lobby",LobbyType.Default));
+    }
+
+    public override void OnJoinedRoom()
+    {
+        base.OnJoinedRoom();
+        Debug.LogFormat("Joined Room");
+        onJoinedRoom?.Invoke();
+    }
+
+    public override void OnJoinRoomFailed(short returnCode, string message)
+    {
+        base.OnJoinRoomFailed(returnCode, message);
+        Debug.LogFormat("Joined Room Failed with returncode[{0}] and errmsg:{1}",returnCode,message);
     }
 
     public override void OnDisconnected(DisconnectCause cause)
