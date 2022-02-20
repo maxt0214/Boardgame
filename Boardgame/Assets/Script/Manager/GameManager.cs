@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
+using System.Linq;
 using Photon.Pun;
+using UnityEngine.SceneManagement;
+using System;
 
 public class GameManager : MonoBehaviour
 {
@@ -19,6 +21,34 @@ public class GameManager : MonoBehaviour
 
     public CharacterSelector charaSelector;
     public PlayerController Player;
+    public Map Map
+    {
+        get
+        {
+            return FindObjectOfType<Map>();
+        }
+    }
+
+    private Die die1;
+    public Die Die1
+    {
+        get
+        {
+            if (die1 == null)
+                die1 = GameObject.Find("Die1").GetComponent<Die>();
+            return die1;
+        }
+    }
+    private Die die2;
+    public Die Die2
+    {
+        get
+        {
+            if (die2 == null)
+                die2 = GameObject.Find("Die2").GetComponent<Die>();
+            return die2;
+        }
+    }
 
     public bool gameStarted { get; private set; } = false;
 
@@ -35,6 +65,7 @@ public class GameManager : MonoBehaviour
 
         var character = charaSelector.SelectRandom(Player.transform);
         Player.character = character;
+        Player.transform.position = Map.WayPoints[0].position;
         DontDestroyOnLoad(Player.gameObject);
         DontDestroyOnLoad(charaSelector.gameObject);
     }
@@ -66,5 +97,28 @@ public class GameManager : MonoBehaviour
     {
         if (gameStarted) //When game started(joined room), update EntityManager
             EntityManager.Instance.Update();
+    }
+
+    public Dictionary<int, Photon.Realtime.Player> Players
+    {
+        get
+        {
+            return PhotonNetwork.CurrentRoom.Players;
+        }
+    }
+
+    private List<int> playerIds;
+    public List<int> PlayerIds
+    {
+        get
+        {
+            if(playerIds == null || playerIds.Count != Instance.Players.Count) playerIds = PhotonNetwork.CurrentRoom.Players.Select(kv => kv.Key).ToList();
+            return playerIds;
+        }
+    }
+
+    public int RollDice()
+    {
+        return Die1.RollAgain() + Die2.RollAgain();
     }
 }

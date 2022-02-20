@@ -71,15 +71,16 @@ public class EntityManager
         }
     }
 
-    public void HitCharacters(Vector3 center, float damage, int attacker)
+    public void HitCharacters(int mid, int dmg, int attacker)
     {
         int[] data = new int[3];
         foreach(var kv in entities)
         {
-            if ((kv.Value.transform.position - center).magnitude < 2f)
+            var chara = kv.Value as Character;
+            if (chara.mid == mid && chara.eid != attacker)
             {
                 data[0] = kv.Key;
-                data[1] = (int)(damage * 10);
+                data[1] = dmg * 10;
                 data[2] = attacker;
                 NetworkManager.Instance.SendNetEvent(data, NetworkConstant.senddmg, true);
             }

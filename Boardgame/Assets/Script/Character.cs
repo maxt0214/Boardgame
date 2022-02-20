@@ -16,6 +16,7 @@ public class Character : Entity
 
     public float dmg = 10f;
     public float hp = 100f;
+    public int mid = 0;
     private AnimState state = AnimState.IDLE;
 
     //These are destination
@@ -75,6 +76,7 @@ public class Character : Entity
             h[(byte)'p'] = new float[3] { pos.x, pos.y, pos.z };
             h[(byte)'d'] = new float[3] { dir.x, dir.y, dir.z };
             h[(byte)'a'] = (byte)state;
+            h[(byte)'m'] = (byte)mid;
         }
     }
 
@@ -107,6 +109,9 @@ public class Character : Entity
                 Animate(this.state);
             }
         }
+
+        if(h.TryGetValue((byte)'m', out object mapid))
+            mid = (byte)mapid;
 
         Debug.LogFormat("Received: Character:[{0}] Position:[{1}] Direction:[{2}] Animation:[{3}]", GameManager.Instance.charaSelector.Characters[this.cid].name, pos, dir, this.state);
     }

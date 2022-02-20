@@ -14,7 +14,7 @@ public class Entity : MonoBehaviour
     private int tid;
     public int eid { get; private set; }
 
-    private int owner;
+    public int owner { get; private set; }
 
     public bool Owned
     {

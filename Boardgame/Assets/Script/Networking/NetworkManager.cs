@@ -90,11 +90,21 @@ public class NetworkManager : MonoBehaviourPunCallbacks, IOnEventCallback
         PhotonNetwork.RaiseEvent(code, param, raiseEventOptions, reliable ? SendOptions.SendReliable : SendOptions.SendUnreliable);
     }
 
+    public void SendNetEvent(int aid, byte code, bool reliable = false)
+    {
+        RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.Others };
+        PhotonNetwork.RaiseEvent(code, aid, raiseEventOptions, reliable ? SendOptions.SendReliable : SendOptions.SendUnreliable);
+    }
+
     public void OnEvent(EventData photonEvent)
     {
         if(photonEvent.Code == NetworkConstant.senddata)
             EntityManager.Instance.Deserialize((Hashtable)photonEvent.CustomData);
         if (photonEvent.Code == NetworkConstant.senddmg)
             EntityManager.Instance.DoHitCharacters((int[])photonEvent.CustomData);
+        if (photonEvent.Code == NetworkConstant.startTurn)
+            GameManager.Instance.Player.StartTurn((int)photonEvent.CustomData);
+        if (photonEvent.Code == NetworkConstant.finishedTurn)
+            GameManager.Instance.Player.ClientFinishedTurn((int)photonEvent.CustomData);
     }
 }

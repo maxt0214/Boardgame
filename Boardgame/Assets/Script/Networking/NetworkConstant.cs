@@ -10,6 +10,8 @@ public static class NetworkConstant
     #region netcode constant
     public const int senddata = 1;
     public const int senddmg = 2;
+    public const int startTurn = 3;
+    public const int finishedTurn = 4;
     #endregion
 
     public static Dictionary<Type, int> EntityIds = new Dictionary<Type, int>();

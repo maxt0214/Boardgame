@@ -1,3 +1,4 @@
+using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,11 +11,13 @@ public class PlayerController : MonoBehaviour
     [HideInInspector]
     public Character character;
 
-    private float rayTimer = 2f;
-    private float timeToCast = 0;
-
     private float attackTimer = 1f;
     private float timeToAttack = 0f;
+
+    private int playerIdx = 0;
+    private bool TurnStarted = false;
+    private bool HasMoved = false;
+    private bool MyTurn = false;
 
     private void Start()
     {
@@ -23,60 +26,67 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.E))
+        if (Input.GetKeyDown(KeyCode.E) && !GameManager.Instance.gameStarted)
             GameManager.Instance.Connect();
 
-        if (Input.GetKeyDown(KeyCode.F))
+        if(PhotonNetwork.IsMasterClient && !TurnStarted && GameManager.Instance.gameStarted)
         {
-            if(attackTimer <= timeToAttack)
+            TurnStarted = true;
+            NotifyNext();
+        }
+
+        if(Input.GetKeyDown(KeyCode.R) && MyTurn)
+        {
+            if(!HasMoved)
             {
-                timeToAttack = 0f;
-                character.Animate(Character.AnimState.ATTACK);
-                Hit();
+                HasMoved = true;
+                character.mid = GameManager.Instance.Map.ValidateIndex(character.mid + GameManager.Instance.RollDice()/2);
+                var dest = GameManager.Instance.Map.GetWayPoint(character.mid);
+                MoveTo(dest);
+            } else
+            {
+                HasMoved = false;
+                Attack(character.mid, GameManager.Instance.RollDice() * 10);
+                MyTurn = false;
+                //This client done
+                if (PhotonNetwork.IsMasterClient)
+                {
+                    NotifyNext();
+                } else
+                {
+                    //Send back to host when done
+                    NetworkManager.Instance.SendNetEvent(PhotonNetwork.LocalPlayer.ActorNumber,NetworkConstant.finishedTurn);
+                }
             }
         }
+
         timeToAttack += Time.deltaTime;
+    }
+
+    private void Attack(int index, int damage)
+    {
+        if (attackTimer <= timeToAttack)
+        {
+            timeToAttack = 0f;
+            character.Animate(Character.AnimState.ATTACK);
+            Hit(index, damage);
+        }
     }
 
     private void LateUpdate()
     {
-        if (Input.GetKeyDown(KeyCode.W))
-            FaceTo(0f);
-        if (Input.GetKeyDown(KeyCode.D))
-            FaceTo(90f);
-        if (Input.GetKeyDown(KeyCode.S))
-            FaceTo(180f);
-        if (Input.GetKeyDown(KeyCode.A))
-            FaceTo(270f);
-
-        //move player to where mouse is clicked
-        if (Input.GetButton("Fire1")) 
-            CastRay();
         //When agent stopped, set character back to idle
         CheckReachedDest();
 
         character.SetTransform(transform.position,transform.forward);
-
-        timeToCast += Time.deltaTime;
     }
 
     private bool startedNavi = false;
-    private void CastRay()
+    public void MoveTo(Transform dest)
     {
-        if (rayTimer > timeToCast) return;
-        timeToCast = 0f;
-
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 100))
-        {
-            Debug.LogFormat("Ray Hit:[{0}]", hit.transform.name);
-            if (hit.transform.tag == "Walkable")
-            {
-                character.Animate(Character.AnimState.WALK);
-                agent.SetDestination(hit.transform.position);
-                startedNavi = true;
-            }
-        }
+        character.Animate(Character.AnimState.WALK);
+        agent.SetDestination(dest.position);
+        startedNavi = true;
     }
 
     private void CheckReachedDest()
@@ -95,34 +105,41 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void FaceTo(float yAngle)
+    private void Hit(int mid, int dmg)
     {
-        transform.eulerAngles = new Vector3(transform.eulerAngles.x, yAngle, transform.eulerAngles.z);
+        EntityManager.Instance.HitCharacters(mid, dmg, character.eid);
+    }
+    //only called by the host
+    public void NotifyNext()
+    {
+        if(playerIdx >= GameManager.Instance.PlayerIds.Count)
+        {
+            playerIdx = 0;
+            TurnStarted = false;
+            return;
+        }
+
+        var aid = GameManager.Instance.PlayerIds[playerIdx++];
+        if (PhotonNetwork.LocalPlayer.ActorNumber == aid)
+            MyTurn = true;
+        else
+            NetworkManager.Instance.SendNetEvent(aid,NetworkConstant.startTurn,true);
+    }
+    //Called when received this client get to start
+    public void StartTurn(int aid)
+    {
+        if (PhotonNetwork.LocalPlayer.ActorNumber == aid)
+            MyTurn = true;
     }
 
-    private void Hit()
+    public void ClientFinishedTurn(int aid)
     {
-        Vector3 center;
-        if(Mathf.Abs(transform.eulerAngles.y - 0f) < 1f)
+        if(playerIdx < GameManager.Instance.PlayerIds.Count)
+            NotifyNext();
+        else
         {
-            center = transform.position + new Vector3(0, 0, 5f);
-            Debug.LogFormat("Player[{0}] at{1} attacks {2}", character.name, transform.position, center);
-            EntityManager.Instance.HitCharacters(center,character.dmg, character.eid);
-        } else if(Mathf.Abs(transform.eulerAngles.y - 90f) < 1f)
-        {
-            center = transform.position + new Vector3(5f, 0, 0);
-            Debug.LogFormat("Player[{0}] at{1} attacks {2}", character.name, transform.position, center);
-            EntityManager.Instance.HitCharacters(center, character.dmg, character.eid);
-        } else if(Mathf.Abs(transform.eulerAngles.y - 180f) < 1f)
-        {
-            center = transform.position + new Vector3(0, 0, -5);
-            Debug.LogFormat("Player[{0}] at{1} attacks {2}", character.name, transform.position, center);
-            EntityManager.Instance.HitCharacters(center, character.dmg, character.eid);
-        } else if(Mathf.Abs(transform.eulerAngles.y - 270f) < 1f)
-        {
-            center = transform.position + new Vector3(-5f, 0, 0);
-            Debug.LogFormat("Player[{0}] at{1} attacks {2}", character.name, transform.position, center);
-            EntityManager.Instance.HitCharacters(center, character.dmg, character.eid);
+            playerIdx = 0;
+            TurnStarted = false;
         }
     }
 }
