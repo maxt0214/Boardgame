@@ -5,6 +5,7 @@ using System.Linq;
 using Photon.Pun;
 using UnityEngine.SceneManagement;
 using System;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
@@ -47,6 +48,20 @@ public class GameManager : MonoBehaviour
             if (die2 == null)
                 die2 = GameObject.Find("Die2").GetComponent<Die>();
             return die2;
+        }
+    }
+
+    private Text userPrompt;
+    public Text UserPrompt
+    {
+        get
+        {
+            if (userPrompt == null)
+            {
+                var prompt = GameObject.Find("UserPrompt");
+                userPrompt = prompt == null ? null : prompt.GetComponent<Text>();
+            }
+            return userPrompt;
         }
     }
 

@@ -77,6 +77,12 @@ public class NetworkManager : MonoBehaviourPunCallbacks, IOnEventCallback
         connecting = false;
     }
 
+    public override void OnPlayerLeftRoom(Player otherPlayer)
+    {
+        base.OnPlayerLeftRoom(otherPlayer);
+        EntityManager.Instance.RemoeEntity(otherPlayer.ActorNumber);
+    }
+
     public void SendNetEvent(Hashtable data, byte code, bool reliable = false)
     {
         RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.Others };

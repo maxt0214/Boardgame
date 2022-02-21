@@ -87,6 +87,21 @@ public class EntityManager
         }
     }
 
+    public void RemoeEntity(int actorNumber)
+    {
+        int key = -1;
+        foreach(var kv in entities)
+        {
+            if (kv.Value.owner == actorNumber)
+            {
+                key = kv.Key;
+                Object.Destroy(kv.Value.gameObject);
+            }
+        }
+        if (key != -1)
+            entities.Remove(key);
+    }
+
     public void DoHitCharacters(int[] dmginfo)
     {
         if(dmginfo.Length != 3)

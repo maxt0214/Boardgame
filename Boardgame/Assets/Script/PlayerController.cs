@@ -61,6 +61,8 @@ public class PlayerController : MonoBehaviour
         }
 
         timeToAttack += Time.deltaTime;
+        if (GameManager.Instance.UserPrompt != null)
+            GameManager.Instance.UserPrompt.color = MyTurn ? Color.red : Color.black;
     }
 
     private void Attack(int index, int damage)
