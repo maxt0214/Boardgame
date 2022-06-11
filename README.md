@@ -4,6 +4,8 @@ RollTheDice is a board game where you roll dice to move your character and attac
 
 Creators: Maxt, Chris Ospina, Isha Sachdeva, Khuwaish Chulani
 
+Try it here: https://maxt0214.itch.io/rollthedice
+
 Art resources are from: https://syntystore.com/ 
 
 Many thanks to awesome low ploy art work at Synty Studios
